@@ -21,7 +21,8 @@ public class DragoneconomyClient implements ClientModInitializer {
     public void onInitializeClient() {
         HudOverlay.register();
         EconomyClientPacketHandler.register();
-
+        // 🔹 Registrar los paquetes del cliente
+        ClientInvoiceManager.registerReceivers();
         openTransferScreenKey = KeyBindingHelper.registerKeyBinding(new KeyBinding(
                 "key.dragoneconomy.open_transfer_screen",
                 InputUtil.Type.KEYSYM,

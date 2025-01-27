@@ -5,6 +5,7 @@ import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.minecraft.client.MinecraftClient;
 import net.minecraft.text.Text;
 import net.minecraft.util.Identifier;
+import org.TNTStudios.dragoneconomy.client.gui.PayInvoiceScreen;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -44,11 +45,10 @@ public class ClientInvoiceManager {
     }
 
     public static void registerReceivers() {
+        // Recibir facturas desde el servidor
         ClientPlayNetworking.registerGlobalReceiver(REQUEST_INVOICES, (client, handler, buf, responseSender) -> {
             int invoiceCount = buf.readInt();
-            invoices.clear();
-
-            System.out.println("📜 Recibidas " + invoiceCount + " facturas desde el servidor.");
+            List<String> receivedInvoices = new ArrayList<>();
 
             for (int i = 0; i < invoiceCount; i++) {
                 String title = buf.readString();
@@ -57,10 +57,24 @@ public class ClientInvoiceManager {
                 boolean isGovernment = buf.readBoolean();
 
                 String invoiceData = title + " - $" + amount + (isGovernment ? " (Gobierno)" : "");
-                invoices.add(invoiceData);
-
-                System.out.println("✅ Factura añadida: " + invoiceData);
+                receivedInvoices.add(invoiceData);
             }
+
+            client.execute(() -> {
+                invoices.clear();
+                invoices.addAll(receivedInvoices);
+
+                System.out.println("📜 Recibidas " + invoiceCount + " facturas desde el servidor.");
+                for (String invoice : receivedInvoices) {
+                    System.out.println("✅ Factura añadida: " + invoice);
+                }
+
+                // 🔹 Asegurar que la pantalla de facturas se actualiza si está abierta
+                if (client.currentScreen instanceof PayInvoiceScreen) {
+                    ((PayInvoiceScreen) client.currentScreen).updateInvoices();
+                }
+            });
         });
+
     }
 }

@@ -50,7 +50,10 @@ public class InvoiceManager {
         Invoice invoice = new Invoice(sender, recipient, title, amount, description, isGovernment);
         invoices.computeIfAbsent(recipient, k -> new ArrayList<>()).add(invoice);
         saveData();
+
+        System.out.println("📜 Factura creada: " + title + " - $" + amount + " (Destino: " + recipient + ")");
     }
+
 
     public static List<Invoice> getInvoices(UUID recipient) {
         return invoices.getOrDefault(recipient, new ArrayList<>());

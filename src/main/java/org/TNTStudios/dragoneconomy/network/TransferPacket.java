@@ -135,8 +135,11 @@ public class TransferPacket {
                 }
 
                 System.out.println("📜 Enviando " + playerInvoices.size() + " facturas al cliente " + player.getName().getString());
+
+                // Enviar datos de facturas al cliente
                 ServerPlayNetworking.send(player, REQUEST_INVOICES, responseBuf);
             });
         });
+
     }
 }

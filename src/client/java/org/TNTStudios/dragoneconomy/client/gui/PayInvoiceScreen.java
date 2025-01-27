@@ -61,6 +61,7 @@ public class PayInvoiceScreen extends Screen {
     }
 
 
+
     private void payInvoice() {
         if (selectedInvoiceIndex == -1 || invoices.isEmpty()) {
             System.out.println("⚠ No hay facturas seleccionadas o disponibles para pagar.");
@@ -94,4 +95,31 @@ public class PayInvoiceScreen extends Screen {
     public boolean shouldCloseOnEsc() {
         return true;
     }
+
+    public void updateInvoices() {
+        invoices.clear();
+        invoices.addAll(ClientInvoiceManager.getInvoices());
+
+        System.out.println("📜 Actualizando GUI con nuevas facturas: " + invoices);
+
+        this.clearChildren();
+
+        int centerX = this.width / 2;
+        int startY = 40;
+
+        for (int i = 0; i < invoices.size(); i++) {
+            int index = i;
+            System.out.println("🔘 Agregando botón para factura: " + invoices.get(i));
+            this.addDrawableChild(ButtonWidget.builder(Text.literal(invoices.get(i)), button -> selectedInvoiceIndex = index)
+                    .dimensions(centerX - 75, startY + (i * 25), 150, 20)
+                    .build());
+        }
+
+        payButton = ButtonWidget.builder(Text.literal("Pagar"), button -> payInvoice())
+                .dimensions(centerX - 50, startY + (invoices.size() * 25) + 20, 100, 20)
+                .build();
+
+        this.addDrawableChild(payButton);
+    }
+
 }
