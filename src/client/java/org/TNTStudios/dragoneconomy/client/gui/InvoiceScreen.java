@@ -7,8 +7,13 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
+import net.minecraft.client.network.ClientPlayNetworkHandler;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
+import net.fabricmc.fabric.api.client.networking.v1.ClientPlayNetworking;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 
 @Environment(EnvType.CLIENT)
 public class InvoiceScreen extends Screen {
@@ -26,8 +31,7 @@ public class InvoiceScreen extends Screen {
     @Override
     protected void init() {
         int centerX = this.width / 2;
-        int screenHeight = this.height;
-        int startY = Math.max(20, (int) (screenHeight * 0.15)); // 🔹 Se ajusta dinámicamente para no estar demasiado abajo
+        int startY = Math.max(20, (int) (this.height * 0.15)); // Ajuste dinámico
 
         // Campos de texto
         recipientField = new TextFieldWidget(textRenderer, centerX - 75, startY + 10, 150, 20, Text.literal(""));
@@ -52,26 +56,41 @@ public class InvoiceScreen extends Screen {
     }
 
     private void sendInvoice() {
-        String recipient = recipientField.getText();
-        String title = titleField.getText();
-        String amount = amountField.getText();
-        String description = descriptionField.getText();
+        String recipient = recipientField.getText().trim();
+        String title = titleField.getText().trim();
+        String amount = amountField.getText().trim();
+        String description = descriptionField.getText().trim();
         boolean isGovernmentPayment = governmentPaymentCheckBox.isChecked();
 
         if (recipient.isEmpty() || title.isEmpty() || amount.isEmpty()) {
             return;
         }
 
-        // Lógica de envío de factura aquí...
-        this.client.setScreen(null);
+        try {
+            int amountValue = Integer.parseInt(amount);
+            if (amountValue <= 0) {
+                return;
+            }
+
+            PacketByteBuf buf = PacketByteBufs.create();
+            buf.writeString(recipient);
+            buf.writeString(title);
+            buf.writeInt(amountValue);
+            buf.writeString(description);
+            buf.writeBoolean(isGovernmentPayment);
+
+            ClientPlayNetworking.send(new Identifier("dragoneconomy", "send_invoice"), buf);
+            this.client.setScreen(null);
+        } catch (NumberFormatException e) {
+            // Evitar valores inválidos
+        }
     }
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
         this.renderBackground(context);
         int centerX = this.width / 2;
-        int screenHeight = this.height;
-        int startY = Math.max(20, (int) (screenHeight * 0.15)); // 🔹 Se ajusta dinámicamente según la pantalla
+        int startY = Math.max(20, (int) (this.height * 0.15));
 
         // Título
         context.drawText(this.textRenderer, Text.literal("Enviar Factura").formatted(Formatting.GOLD), centerX - 40, startY - 30, 0xFFFFFF, false);

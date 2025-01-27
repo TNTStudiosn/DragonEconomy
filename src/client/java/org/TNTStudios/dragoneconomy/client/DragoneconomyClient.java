@@ -66,8 +66,7 @@ public class DragoneconomyClient implements ClientModInitializer {
 
         // Verificar si la tecla de pagar facturas fue presionada
         if (openPayInvoiceScreenKey.wasPressed()) {
-            List<String> invoices = new ArrayList<>(); // Aquí debes cargar las facturas pendientes
-            client.setScreen(new PayInvoiceScreen(invoices));
+            client.setScreen(new PayInvoiceScreen()); // Eliminamos la lista de facturas aquí
         }
     }
 }
