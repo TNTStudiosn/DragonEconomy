@@ -13,12 +13,14 @@ import org.TNTStudios.dragoneconomy.network.EconomySyncPacket;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.Files;
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.UUID;
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+
+import java.io.FileWriter;
+
 
 public class EconomyManager {
     private static final File STORAGE_FILE = new File("config/dragoneconomy_data.json");
@@ -122,6 +124,55 @@ public class EconomyManager {
             Files.write(STORAGE_FILE.toPath(), GSON.toJson(playerBalances).getBytes());
         } catch (IOException e) {
             System.err.println("Error al guardar los datos de economía: " + e.getMessage());
+        }
+    }
+
+    public static void transferMoney(ServerPlayerEntity sender, ServerPlayerEntity receiver, int amount) {
+        UUID senderUUID = sender.getUuid();
+        UUID receiverUUID = receiver.getUuid();
+
+        int senderBalance = getBalance(senderUUID);
+        if (senderBalance < amount) {
+            sender.sendMessage(Text.literal("No tienes fondos suficientes").formatted(Formatting.RED), false);
+            return;
+        }
+
+        // Realizar la transferencia
+        setBalance(senderUUID, senderBalance - amount);
+        addMoney(receiverUUID, amount);
+
+        sender.sendMessage(Text.literal("Has enviado $" + amount + " a " + receiver.getName().getString()).formatted(Formatting.GREEN), false);
+        receiver.sendMessage(Text.literal("Has recibido $" + amount + " de " + sender.getName().getString()).formatted(Formatting.GREEN), false);
+
+        // Guardar la transferencia en historial
+        saveTransferHistory(senderUUID, receiver.getName().getString(), amount);
+    }
+
+    private static void saveTransferHistory(UUID senderUUID, String receiverName, int amount) {
+        File dir = new File("config/dragoneconomy/transferencias/" + senderUUID);
+        if (!dir.exists()) dir.mkdirs();
+
+        File historyFile = new File(dir, "historial.json");
+        Gson gson = new Gson();
+
+        Map<String, Integer> history;
+        if (historyFile.exists()) {
+            try {
+                String json = new String(Files.readAllBytes(historyFile.toPath()));
+                history = gson.fromJson(json, new TypeToken<Map<String, Integer>>(){}.getType());
+            } catch (IOException e) {
+                history = new HashMap<>();
+            }
+        } else {
+            history = new HashMap<>();
+        }
+
+        history.put(receiverName, history.getOrDefault(receiverName, 0) + amount);
+
+        try (FileWriter writer = new FileWriter(historyFile)) {
+            gson.toJson(history, writer);
+        } catch (IOException e) {
+            System.err.println("Error al guardar el historial de transferencias: " + e.getMessage());
         }
     }
 }
