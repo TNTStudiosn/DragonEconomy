@@ -11,6 +11,7 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import org.TNTStudios.dragoneconomy.client.ClientInvoiceManager;
 
 @Environment(EnvType.CLIENT)
 public class PayInvoiceDetailsScreen extends Screen {
@@ -28,7 +29,10 @@ public class PayInvoiceDetailsScreen extends Screen {
         int centerX = this.width / 2;
         int startY = Math.max(20, (int) (this.height * 0.3));
 
-        // Mostrar detalles de la factura
+        // 🔍 Depuración
+        System.out.println("📜 Abriendo detalles de factura: " + invoice);
+
+        // Botón para pagar la factura
         this.addDrawableChild(ButtonWidget.builder(Text.literal("Pagar"), button -> payInvoice())
                 .dimensions(centerX - 50, startY + 80, 100, 20)
                 .build());
@@ -43,8 +47,13 @@ public class PayInvoiceDetailsScreen extends Screen {
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeString(invoice);
         ClientPlayNetworking.send(new Identifier("dragoneconomy", "pay_invoice"), buf);
+
+        // ✅ Eliminar la factura del cliente después de pagarla
+        ClientInvoiceManager.removeInvoice(invoice);
+
         this.client.setScreen(null);
     }
+
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {

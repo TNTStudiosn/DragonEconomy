@@ -7,11 +7,16 @@ public class ClientInvoiceManager {
     private static final List<String> invoices = new ArrayList<>();
 
     public static List<String> getInvoices() {
-        return new ArrayList<>(invoices);
+        return new ArrayList<>(invoices); // Se devuelve una copia para evitar modificaciones externas
     }
 
     public static void addInvoice(String invoice) {
-        invoices.add(invoice);
+        if (!invoices.contains(invoice)) {
+            invoices.add(invoice);
+            System.out.println("✅ Factura añadida correctamente: " + invoice); // 🔍 Depuración
+        } else {
+            System.out.println("⚠ La factura ya estaba en la lista: " + invoice);
+        }
     }
 
     public static void removeInvoice(String invoice) {

@@ -15,13 +15,17 @@ import java.util.List;
 public class PayInvoiceScreen extends Screen {
     private List<String> invoices;
 
-    public PayInvoiceScreen() { // Eliminamos el parámetro del constructor
+    public PayInvoiceScreen() {
         super(Text.literal("Pagar Facturas"));
     }
 
     @Override
     protected void init() {
-        invoices = ClientInvoiceManager.getInvoices(); // Obtiene las facturas directamente del gestor del cliente
+        invoices = ClientInvoiceManager.getInvoices(); // Obtiene las facturas del cliente
+
+        // 🔍 Depuración para verificar si la lista está vacía
+        System.out.println("📜 Lista de facturas obtenida en PayInvoiceScreen: " + invoices);
+
         int centerX = this.width / 2;
         int startY = Math.max(20, (int) (this.height * 0.2));
 
@@ -40,6 +44,10 @@ public class PayInvoiceScreen extends Screen {
     }
 
     private void openInvoiceDetails(String invoice) {
+        if (invoice == null || invoice.isEmpty()) {
+            System.out.println("⚠ Error: Factura nula o vacía, no se puede abrir detalles.");
+            return;
+        }
         this.client.setScreen(new PayInvoiceDetailsScreen(invoice, this));
     }
 

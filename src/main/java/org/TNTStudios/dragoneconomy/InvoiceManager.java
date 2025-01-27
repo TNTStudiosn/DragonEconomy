@@ -2,9 +2,13 @@ package org.TNTStudios.dragoneconomy;
 
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
+import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
+import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
+import net.minecraft.util.Identifier;
 
 import java.io.File;
 import java.io.FileReader;
@@ -54,10 +58,11 @@ public class InvoiceManager {
 
     public static boolean payInvoice(ServerPlayerEntity payer, Invoice invoice) {
         UUID payerUUID = payer.getUuid();
-
         int balance = EconomyManager.getBalance(payerUUID);
+
         if (balance < invoice.getAmount()) {
-            payer.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.").formatted(Formatting.RED), false);
+            payer.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.")
+                    .formatted(Formatting.RED), false);
             return false;
         }
 
@@ -70,6 +75,13 @@ public class InvoiceManager {
         saveData();
 
         payer.sendMessage(Text.literal("✔ Has pagado la factura con éxito.").formatted(Formatting.GREEN), false);
+
+        // ✅ Notificar al cliente que la factura fue pagada
+        PacketByteBuf buf = PacketByteBufs.create();
+        buf.writeString(invoice.getTitle());
+        ServerPlayNetworking.send(payer, new Identifier("dragoneconomy", "invoice_paid"), buf);
+
         return true;
     }
+
 }
