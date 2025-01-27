@@ -20,23 +20,34 @@ public class TransferPacket {
             int amount = buf.readInt();
 
             server.execute(() -> {
-                // ✅ Convertimos el UUID del remitente en `ServerPlayerEntity`
                 ServerPlayerEntity sender = server.getPlayerManager().getPlayer(UUID.fromString(senderUUID));
                 ServerPlayerEntity targetPlayer = server.getPlayerManager().getPlayer(targetPlayerName);
 
                 if (sender == null) {
-                    player.sendMessage(Text.literal("Error: No se encontró al jugador emisor.").formatted(Formatting.RED), false);
                     return;
                 }
 
                 if (targetPlayer != null) {
-                    EconomyManager.transferMoney(sender, targetPlayer, amount);
-                    sender.sendMessage(Text.literal("Has enviado $" + amount + " a " + targetPlayerName).formatted(Formatting.GREEN), false);
-                    targetPlayer.sendMessage(Text.literal("Has recibido $" + amount + " de " + sender.getName().getString()).formatted(Formatting.GREEN), false);
+                    if (EconomyManager.getBalance(sender.getUuid()) >= amount) {
+                        EconomyManager.transferMoney(sender, targetPlayer, amount);
+
+                        // Enviar confirmación al jugador emisor
+                        sender.sendMessage(Text.literal("✔ Has enviado $" + amount + " a " + targetPlayerName)
+                                .formatted(Formatting.GREEN), false);
+
+                        // Enviar confirmación al jugador receptor
+                        targetPlayer.sendMessage(Text.literal("✔ Has recibido $" + amount + " de " + sender.getName().getString())
+                                .formatted(Formatting.GREEN), false);
+
+                    } else {
+                        sender.sendMessage(Text.literal("⚠ No tienes fondos suficientes").formatted(Formatting.RED), false);
+                    }
                 } else {
-                    sender.sendMessage(Text.literal("Jugador no encontrado").formatted(Formatting.RED), false);
+                    sender.sendMessage(Text.literal("⚠ Jugador no encontrado").formatted(Formatting.RED), false);
                 }
             });
         });
     }
+
+
 }

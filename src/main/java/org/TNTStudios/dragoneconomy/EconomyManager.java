@@ -10,16 +10,13 @@ import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import org.TNTStudios.dragoneconomy.network.EconomySyncPacket;
 
-import java.io.File;
-import java.io.IOException;
+import java.io.*;
 import java.nio.file.Files;
-import java.util.HashMap;
-import java.util.Map;
-import java.util.UUID;
+import java.text.SimpleDateFormat;
+import java.util.*;
+
 import com.google.gson.Gson;
 import com.google.gson.reflect.TypeToken;
-
-import java.io.FileWriter;
 
 
 public class EconomyManager {
@@ -73,14 +70,9 @@ public class EconomyManager {
                 return 250;
             }
         }
-        return 0;
+        return 100;
     }
 
-    public static void sendBalanceToClient(ServerPlayerEntity player) {
-        UUID playerUUID = player.getUuid();
-        int balance = getBalance(playerUUID);
-        EconomySyncPacket.send(player, balance);
-    }
 
     public static int getBalance(UUID playerUUID) {
         return playerBalances.getOrDefault(playerUUID, 0);
@@ -133,20 +125,35 @@ public class EconomyManager {
 
         int senderBalance = getBalance(senderUUID);
         if (senderBalance < amount) {
-            sender.sendMessage(Text.literal("No tienes fondos suficientes").formatted(Formatting.RED), false);
+            sender.sendMessage(Text.literal("⚠ No tienes fondos suficientes").formatted(Formatting.RED), false);
             return;
         }
 
-        // Realizar la transferencia
+        // ✅ Realizar la transferencia
         setBalance(senderUUID, senderBalance - amount);
         addMoney(receiverUUID, amount);
 
-        sender.sendMessage(Text.literal("Has enviado $" + amount + " a " + receiver.getName().getString()).formatted(Formatting.GREEN), false);
-        receiver.sendMessage(Text.literal("Has recibido $" + amount + " de " + sender.getName().getString()).formatted(Formatting.GREEN), false);
+        // ✅ Enviar saldo actualizado a ambos jugadores
+        sendBalanceToClient(sender);
+        sendBalanceToClient(receiver);
 
-        // Guardar la transferencia en historial
+        // ✅ Enviar mensaje de confirmación dentro de la GUI
+        sender.sendMessage(Text.literal("✔ Has enviado $" + amount + " a " + receiver.getName().getString())
+                .formatted(Formatting.GREEN), false);
+        receiver.sendMessage(Text.literal("✔ Has recibido $" + amount + " de " + sender.getName().getString())
+                .formatted(Formatting.GREEN), false);
+
+        // ✅ Guardar la transferencia en historial
         saveTransferHistory(senderUUID, receiver.getName().getString(), amount);
     }
+
+    public static void sendBalanceToClient(ServerPlayerEntity player) {
+        UUID playerUUID = player.getUuid();
+        int balance = getBalance(playerUUID);
+        EconomySyncPacket.send(player, balance);
+    }
+
+
 
     private static void saveTransferHistory(UUID senderUUID, String receiverName, int amount) {
         File dir = new File("config/dragoneconomy/transferencias/" + senderUUID);
@@ -155,19 +162,23 @@ public class EconomyManager {
         File historyFile = new File(dir, "historial.json");
         Gson gson = new Gson();
 
-        Map<String, Integer> history;
+        List<Map<String, Object>> history;
         if (historyFile.exists()) {
-            try {
-                String json = new String(Files.readAllBytes(historyFile.toPath()));
-                history = gson.fromJson(json, new TypeToken<Map<String, Integer>>(){}.getType());
+            try (Reader reader = new FileReader(historyFile)) {
+                history = gson.fromJson(reader, new TypeToken<List<Map<String, Object>>>(){}.getType());
             } catch (IOException e) {
-                history = new HashMap<>();
+                history = new ArrayList<>();
             }
         } else {
-            history = new HashMap<>();
+            history = new ArrayList<>();
         }
 
-        history.put(receiverName, history.getOrDefault(receiverName, 0) + amount);
+        Map<String, Object> transferRecord = new HashMap<>();
+        transferRecord.put("destinatario", receiverName);
+        transferRecord.put("cantidad", amount);
+        transferRecord.put("fecha", new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(new Date()));
+
+        history.add(transferRecord);
 
         try (FileWriter writer = new FileWriter(historyFile)) {
             gson.toJson(history, writer);
