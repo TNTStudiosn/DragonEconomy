@@ -1,5 +1,6 @@
 package org.TNTStudios.dragoneconomy.network;
 
+import net.fabricmc.fabric.api.networking.v1.PacketByteBufs;
 import net.fabricmc.fabric.api.networking.v1.ServerPlayNetworking;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.server.network.ServerPlayerEntity;
@@ -10,12 +11,15 @@ import org.TNTStudios.dragoneconomy.EconomyManager;
 import org.TNTStudios.dragoneconomy.Invoice;
 import org.TNTStudios.dragoneconomy.InvoiceManager;
 
+import java.util.List;
 import java.util.UUID;
 
 public class TransferPacket {
     public static final Identifier ID = new Identifier("dragoneconomy", "transfer_money");
     public static final Identifier INVOICE_ID = new Identifier("dragoneconomy", "send_invoice");
     public static final Identifier PAY_INVOICE_ID = new Identifier("dragoneconomy", "pay_invoice");
+    public static final Identifier REQUEST_INVOICES = new Identifier("dragoneconomy", "request_invoices");
+
 
     public static void registerReceiver() {
         // Manejador de transferencia de dinero estándar
@@ -95,13 +99,43 @@ public class TransferPacket {
                 }
 
                 if (targetInvoice != null) {
-                    if (InvoiceManager.payInvoice(player, targetInvoice)) {
-                        player.sendMessage(Text.literal("✔ Has pagado la factura '" + invoiceTitle + "' con éxito.")
-                                .formatted(Formatting.GREEN), false);
+                    if (EconomyManager.getBalance(payerUUID) >= targetInvoice.getAmount()) {
+                        EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - targetInvoice.getAmount());
+
+                        if (!targetInvoice.isGovernmentPayment()) {
+                            EconomyManager.addMoney(targetInvoice.getSender(), targetInvoice.getAmount());
+                        }
+
+                        InvoiceManager.removeInvoice(payerUUID, targetInvoice);
+
+                        player.sendMessage(Text.literal("✔ Has pagado la factura: " + invoiceTitle).formatted(Formatting.GREEN), false);
+                    } else {
+                        player.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.").formatted(Formatting.RED), false);
                     }
                 } else {
                     player.sendMessage(Text.literal("⚠ Factura no encontrada.").formatted(Formatting.RED), false);
                 }
+            });
+        });
+
+        // Manejador para solicitud de facturas
+        ServerPlayNetworking.registerGlobalReceiver(REQUEST_INVOICES, (server, player, handler, buf, responseSender) -> {
+            server.execute(() -> {
+                UUID playerUUID = player.getUuid();
+                List<Invoice> playerInvoices = InvoiceManager.getInvoices(playerUUID);
+
+                PacketByteBuf responseBuf = PacketByteBufs.create();
+                responseBuf.writeInt(playerInvoices.size());
+
+                for (Invoice invoice : playerInvoices) {
+                    responseBuf.writeString(invoice.getTitle());
+                    responseBuf.writeInt(invoice.getAmount());
+                    responseBuf.writeString(invoice.getDescription());
+                    responseBuf.writeBoolean(invoice.isGovernmentPayment());
+                }
+
+                System.out.println("📜 Enviando " + playerInvoices.size() + " facturas al cliente " + player.getName().getString());
+                ServerPlayNetworking.send(player, REQUEST_INVOICES, responseBuf);
             });
         });
     }

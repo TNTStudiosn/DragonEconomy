@@ -56,32 +56,17 @@ public class InvoiceManager {
         return invoices.getOrDefault(recipient, new ArrayList<>());
     }
 
-    public static boolean payInvoice(ServerPlayerEntity payer, Invoice invoice) {
-        UUID payerUUID = payer.getUuid();
-        int balance = EconomyManager.getBalance(payerUUID);
 
-        if (balance < invoice.getAmount()) {
-            payer.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.")
-                    .formatted(Formatting.RED), false);
-            return false;
+    public static void removeInvoice(UUID recipientUUID, Invoice invoice) {
+        List<Invoice> userInvoices = invoices.get(recipientUUID);
+        if (userInvoices != null) {
+            userInvoices.remove(invoice);
+            if (userInvoices.isEmpty()) {
+                invoices.remove(recipientUUID); // Eliminar la lista si está vacía
+            }
+            saveData(); // Guardar los cambios
         }
-
-        if (!invoice.isGovernmentPayment()) {
-            EconomyManager.addMoney(invoice.getSender(), invoice.getAmount());
-        }
-
-        EconomyManager.setBalance(payerUUID, balance - invoice.getAmount());
-        invoices.get(payerUUID).remove(invoice);
-        saveData();
-
-        payer.sendMessage(Text.literal("✔ Has pagado la factura con éxito.").formatted(Formatting.GREEN), false);
-
-        // ✅ Notificar al cliente que la factura fue pagada
-        PacketByteBuf buf = PacketByteBufs.create();
-        buf.writeString(invoice.getTitle());
-        ServerPlayNetworking.send(payer, new Identifier("dragoneconomy", "invoice_paid"), buf);
-
-        return true;
     }
+
 
 }
