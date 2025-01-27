@@ -17,9 +17,13 @@ public class ClientInvoiceManager {
     public static final Identifier REQUEST_INVOICES = new Identifier("dragoneconomy", "request_invoices");
 
     public static List<Invoice> getInvoices() {
-        System.out.println("🔍 Obteniendo lista de facturas: " + invoices);
-        return new ArrayList<>(invoices); // Se devuelve una copia para evitar modificaciones externas
+        System.out.println("🔍 Obteniendo lista de facturas:");
+        for (Invoice invoice : invoices) {
+            System.out.println("✅ Factura en lista: " + invoice.getTitle() + " (ID: " + invoice.getInvoiceId() + ")");
+        }
+        return new ArrayList<>(invoices);
     }
+
 
     public static void addInvoice(Invoice invoice) {
         if (!invoices.contains(invoice)) {
@@ -53,14 +57,14 @@ public class ClientInvoiceManager {
             List<Invoice> receivedInvoices = new ArrayList<>();
 
             for (int i = 0; i < invoiceCount; i++) {
-                UUID invoiceId = buf.readUuid(); // 🔹 Leer UUID de la factura
-                UUID senderId = buf.readUuid(); // 🔹 Leer UUID del remitente
-                String title = buf.readString(); // 🔹 Leer título de la factura
-                int amount = buf.readInt(); // 🔹 Leer cantidad
-                String description = buf.readString(); // 🔹 Leer descripción
-                boolean isGovernment = buf.readBoolean(); // 🔹 Leer si es del gobierno
+                UUID invoiceId = buf.readUuid(); // ✅ Leer el UUID correcto.
+                UUID senderId = buf.readUuid();
+                String title = buf.readString();
+                int amount = buf.readInt();
+                String description = buf.readString();
+                boolean isGovernment = buf.readBoolean();
 
-                Invoice invoice = new Invoice(invoiceId, senderId, title, amount, description, isGovernment);
+                Invoice invoice = new Invoice(invoiceId, senderId, client.player.getUuid(), title, amount, description, isGovernment);
                 receivedInvoices.add(invoice);
             }
 
@@ -70,15 +74,17 @@ public class ClientInvoiceManager {
 
                 System.out.println("📜 Recibidas " + invoiceCount + " facturas desde el servidor.");
                 for (Invoice invoice : receivedInvoices) {
-                    System.out.println("✅ Factura añadida: " + invoice.getTitle());
+                    System.out.println("✅ Factura añadida: " + invoice.getTitle() + " (ID: " + invoice.getInvoiceId() + ")");
                 }
 
-                // 🔹 Asegurar que la pantalla de facturas se actualiza si está abierta
                 if (client.currentScreen instanceof PayInvoiceScreen) {
                     ((PayInvoiceScreen) client.currentScreen).updateInvoices();
+                    System.out.println("🔄 Actualización forzada de la pantalla de pago.");
                 }
             });
+
         });
+
 
     }
 

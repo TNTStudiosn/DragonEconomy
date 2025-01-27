@@ -30,7 +30,7 @@ public class EconomyClientPacketHandler {
             String description = buf.readString();
             boolean isGovernment = buf.readBoolean();
 
-            Invoice invoice = new Invoice(invoiceId, senderId, title, amount, description, isGovernment);
+            Invoice invoice = new Invoice(invoiceId, senderId, client.player.getUuid(), title, amount, description, isGovernment);
 
             client.execute(() -> {
                 System.out.println("📜 Factura recibida en cliente: " + invoice.getTitle());

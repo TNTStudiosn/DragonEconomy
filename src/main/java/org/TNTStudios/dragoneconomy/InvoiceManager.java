@@ -47,12 +47,19 @@ public class InvoiceManager {
     }
 
     public static void createInvoice(UUID sender, UUID recipient, String title, int amount, String description, boolean isGovernment) {
-        Invoice invoice = new Invoice(sender, recipient, title, amount, description, isGovernment);
+        UUID invoiceId = UUID.randomUUID(); // ✅ Generar un solo UUID aquí.
+        Invoice invoice = new Invoice(invoiceId, sender, recipient, title, amount, description, isGovernment);
+
+        System.out.println("📝 Creando factura en el servidor: " + invoice);
+
         invoices.computeIfAbsent(recipient, k -> new ArrayList<>()).add(invoice);
+
         saveData();
 
-        System.out.println("📜 Factura creada: " + title + " - $" + amount + " (Destino: " + recipient + ")");
+        System.out.println("📜 Facturas actuales para " + recipient + ": " + invoices.get(recipient));
     }
+
+
 
 
     public static List<Invoice> getInvoices(UUID recipient) {
@@ -73,13 +80,22 @@ public class InvoiceManager {
 
     public static Invoice getInvoiceById(UUID recipientUUID, UUID invoiceId) {
         List<Invoice> userInvoices = invoices.getOrDefault(recipientUUID, new ArrayList<>());
+
+        System.out.println("🔍 Buscando factura en el servidor...");
+        System.out.println("📜 Facturas del usuario " + recipientUUID + ": " + userInvoices);
+
         for (Invoice invoice : userInvoices) {
+            System.out.println("➡ Comparando: " + invoice.getInvoiceId() + " con " + invoiceId);
             if (invoice.getInvoiceId().equals(invoiceId)) {
+                System.out.println("✅ Factura encontrada en servidor: " + invoice.getTitle());
                 return invoice;
             }
         }
+
+        System.out.println("⚠ Factura NO encontrada en el servidor.");
         return null;
     }
+
 
 
 }

@@ -11,6 +11,8 @@ import net.minecraft.util.Identifier;
 import org.TNTStudios.dragoneconomy.Invoice;
 import org.TNTStudios.dragoneconomy.InvoiceManager;
 
+import java.util.UUID;
+
 public class InvoicePacket {
     public static final Identifier SEND_INVOICE = new Identifier("dragoneconomy", "send_invoice");
     public static final Identifier RECEIVE_INVOICE = new Identifier("dragoneconomy", "receive_invoice");
@@ -26,7 +28,8 @@ public class InvoicePacket {
             server.execute(() -> {
                 ServerPlayerEntity recipient = server.getPlayerManager().getPlayer(recipientName);
                 if (recipient != null) {
-                    Invoice invoice = new Invoice(player.getUuid(), recipient.getUuid(), title, amount, description, isGovernment);
+                    UUID invoiceId = UUID.randomUUID(); // ✅ Generamos el UUID de la factura
+                    Invoice invoice = new Invoice(invoiceId, player.getUuid(), recipient.getUuid(), title, amount, description, isGovernment);
                     InvoiceManager.createInvoice(
                             invoice.getSender(),
                             invoice.getRecipient(),
@@ -39,14 +42,15 @@ public class InvoicePacket {
 
                     // Al enviar facturas al cliente
                     PacketByteBuf invoiceBuf = PacketByteBufs.create();
-                    invoiceBuf.writeUuid(invoice.getInvoiceId()); // Enviar UUID
-                    invoiceBuf.writeUuid(invoice.getSender()); // Enviar ID del remitente
+                    invoiceBuf.writeUuid(invoice.getInvoiceId()); // ✅ Asegurar que el cliente recibe el UUID correcto.
+                    invoiceBuf.writeUuid(invoice.getSender());
                     invoiceBuf.writeString(invoice.getTitle());
                     invoiceBuf.writeInt(invoice.getAmount());
                     invoiceBuf.writeString(invoice.getDescription());
                     invoiceBuf.writeBoolean(invoice.isGovernmentPayment());
 
                     ServerPlayNetworking.send(recipient, RECEIVE_INVOICE, invoiceBuf);
+
 
                     recipient.sendMessage(Text.literal("📜 Has recibido una nueva factura.").formatted(Formatting.YELLOW), false);
                 } else {

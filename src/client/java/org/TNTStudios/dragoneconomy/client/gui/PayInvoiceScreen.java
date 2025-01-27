@@ -28,6 +28,7 @@ public class PayInvoiceScreen extends Screen {
         super(Text.literal("Pagar Facturas"));
         ClientInvoiceManager.refreshInvoices();
         this.invoices = ClientInvoiceManager.getInvoices();
+        updateInvoices();  // Llamar a la actualización al iniciar la pantalla
     }
 
     @Override
@@ -41,7 +42,7 @@ public class PayInvoiceScreen extends Screen {
         int startY = 40;
 
         for (Invoice invoice : invoices) {
-            String formattedText = invoice.getTitle() + " - $" + invoice.getAmount(); // ✅ Mostrar título + precio
+            String formattedText = invoice.getTitle() + " - $" + invoice.getAmount();
             CheckboxWidget checkbox = new CheckboxWidget(
                     centerX - 75, startY + (invoices.indexOf(invoice) * 25),
                     20, 20,
@@ -52,16 +53,31 @@ public class PayInvoiceScreen extends Screen {
             invoiceMap.put(invoice.getInvoiceId(), invoice);
             this.addDrawableChild(checkbox);
         }
+
+        payButton = ButtonWidget.builder(Text.literal("Pagar Seleccionadas"), button -> paySelectedInvoices())
+                .dimensions(centerX - 50, startY + (invoices.size() * 25) + 20, 150, 20)
+                .build();
+        this.addDrawableChild(payButton);
+
+        // ✅ Aseguramos que se actualicen las facturas después de inicializar
+        updateInvoices();
     }
+
 
     private void paySelectedInvoices() {
         List<UUID> selectedInvoiceIds = new ArrayList<>();
+
+        System.out.println("🔍 Verificando checkboxes seleccionados...");
         for (CheckboxWidget checkbox : checkboxes) {
+            System.out.println("➡ Checkbox: " + checkbox.getMessage().getString() + " | Estado: " + checkbox.isChecked());
+
             if (checkbox.isChecked()) {
                 for (Map.Entry<UUID, Invoice> entry : invoiceMap.entrySet()) {
                     String formattedTitle = entry.getValue().getTitle() + " - $" + entry.getValue().getAmount();
+
                     if (formattedTitle.equals(checkbox.getMessage().getString())) {
                         selectedInvoiceIds.add(entry.getKey());
+                        System.out.println("✅ Factura agregada para pago: " + entry.getKey());
                         break;
                     }
                 }
@@ -69,9 +85,11 @@ public class PayInvoiceScreen extends Screen {
         }
 
         if (selectedInvoiceIds.isEmpty()) {
-            System.out.println("⚠ No se seleccionó ninguna factura.");
+            System.out.println("⚠ No se seleccionó ninguna factura. Puede que los checkboxes no estén actualizados correctamente.");
             return;
         }
+
+        System.out.println("📜 Facturas seleccionadas para pagar: " + selectedInvoiceIds);
 
         PacketByteBuf buf = PacketByteBufs.create();
         buf.writeInt(selectedInvoiceIds.size());
@@ -80,8 +98,10 @@ public class PayInvoiceScreen extends Screen {
         }
 
         ClientPlayNetworking.send(new Identifier("dragoneconomy", "pay_multiple_invoices"), buf);
+        ClientInvoiceManager.refreshInvoices();
         this.client.setScreen(null);
     }
+
 
     @Override
     public void render(DrawContext context, int mouseX, int mouseY, float delta) {
@@ -103,16 +123,31 @@ public class PayInvoiceScreen extends Screen {
         int centerX = this.width / 2;
         int startY = 40;
 
-        for (Invoice invoice : invoices) {
-            String formattedText = invoice.getTitle() + " - $" + invoice.getAmount();
-            CheckboxWidget checkbox = new CheckboxWidget(centerX - 75, startY + (invoices.indexOf(invoice) * 25), 20, 20, Text.literal(formattedText), false);
-            checkboxes.add(checkbox);
-            this.addDrawableChild(checkbox);
+        if (invoices.isEmpty()) {
+            System.out.println("⚠ No hay facturas disponibles, ocultando botón de pago.");
         }
 
-        payButton = ButtonWidget.builder(Text.literal("Pagar Seleccionadas"), button -> paySelectedInvoices())
-                .dimensions(centerX - 50, startY + (invoices.size() * 25) + 20, 150, 20)
-                .build();
-        this.addDrawableChild(payButton);
+        for (Invoice invoice : invoices) {
+            String formattedText = invoice.getTitle() + " - $" + invoice.getAmount();
+            CheckboxWidget checkbox = new CheckboxWidget(centerX - 75, startY + (checkboxes.size() * 25), 20, 20, Text.literal(formattedText), false);
+            checkboxes.add(checkbox);
+            invoiceMap.put(invoice.getInvoiceId(), invoice);
+
+            this.addDrawableChild(checkbox);
+            System.out.println("🛠 Añadido checkbox: " + formattedText);
+        }
+
+        // ✅ Asegurar que el botón de pago solo desaparece si no hay facturas
+        if (!invoices.isEmpty()) {
+            payButton = ButtonWidget.builder(Text.literal("Pagar Seleccionadas"), button -> paySelectedInvoices())
+                    .dimensions(centerX - 50, startY + (invoices.size() * 25) + 20, 150, 20)
+                    .build();
+            this.addDrawableChild(payButton);
+            System.out.println("✅ Botón de pagar añadido.");
+        } else {
+            System.out.println("❌ Botón de pagar no generado porque no hay facturas.");
+        }
     }
+
+
 }

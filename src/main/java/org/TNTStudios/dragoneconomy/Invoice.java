@@ -11,8 +11,8 @@ public class Invoice {
     private String description;
     private boolean isGovernmentPayment;
 
-    public Invoice(UUID sender, UUID recipient, String title, int amount, String description, boolean isGovernmentPayment) {
-        this.invoiceId = UUID.randomUUID(); // Generamos un identificador único para cada factura
+    public Invoice(UUID invoiceId, UUID sender, UUID recipient, String title, int amount, String description, boolean isGovernmentPayment) {
+        this.invoiceId = invoiceId; // ✅ Usar el mismo UUID que se creó en el servidor.
         this.sender = sender;
         this.recipient = recipient;
         this.title = title;
@@ -20,6 +20,7 @@ public class Invoice {
         this.description = description;
         this.isGovernmentPayment = isGovernmentPayment;
     }
+
 
     public UUID getInvoiceId() {
         return invoiceId;

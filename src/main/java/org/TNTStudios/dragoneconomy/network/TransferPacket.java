@@ -89,16 +89,20 @@ public class TransferPacket {
             List<UUID> invoicesToPay = new ArrayList<>();
 
             for (int i = 0; i < count; i++) {
-                invoicesToPay.add(buf.readUuid()); // Almacenar los UUIDs de las facturas
+                invoicesToPay.add(buf.readUuid());
             }
 
-            server.execute(() -> { // 🔹 Aseguramos que el código del servidor se ejecuta correctamente
+            System.out.println("📜 Servidor recibió solicitud para pagar " + count + " facturas.");
+
+            server.execute(() -> {
                 UUID payerUUID = player.getUuid();
 
                 for (UUID invoiceId : invoicesToPay) {
                     Invoice targetInvoice = InvoiceManager.getInvoiceById(payerUUID, invoiceId);
 
                     if (targetInvoice != null) {
+                        System.out.println("✅ Factura encontrada en servidor: " + targetInvoice.getTitle());
+
                         if (EconomyManager.getBalance(payerUUID) >= targetInvoice.getAmount()) {
                             EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - targetInvoice.getAmount());
 
@@ -116,7 +120,8 @@ public class TransferPacket {
                     }
                 }
             });
-        }); // 🔹 Se cierra correctamente `ServerPlayNetworking.registerGlobalReceiver()`
+        });
+
 
         // Manejador para solicitud de facturas
         ServerPlayNetworking.registerGlobalReceiver(REQUEST_INVOICES, (server, player, handler, buf, responseSender) -> {
