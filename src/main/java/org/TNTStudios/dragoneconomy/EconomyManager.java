@@ -6,6 +6,8 @@ import net.luckperms.api.LuckPerms;
 import net.luckperms.api.LuckPermsProvider;
 import net.luckperms.api.model.user.User;
 import net.minecraft.server.network.ServerPlayerEntity;
+import net.minecraft.text.Text;
+import net.minecraft.util.Formatting;
 import org.TNTStudios.dragoneconomy.network.EconomySyncPacket;
 
 import java.io.File;
@@ -33,13 +35,19 @@ public class EconomyManager {
 
             // Si el jugador no tiene un balance registrado, darle el inicial
             if (!playerBalances.containsKey(playerUUID)) {
-                int money = determineInitialMoney(player);
-                setBalance(playerUUID, money); // Usamos setBalance para asegurar que se guarde correctamente
+                int initialMoney = determineInitialMoney(player);
+                setBalance(playerUUID, initialMoney);
+
+                // Enviar mensaje de bienvenida
+                player.sendMessage(Text.literal("¡Bienvenido a DragonCraft! Se te ha otorgado $" + initialMoney + " de inicio.")
+                        .styled(style -> style.withColor(Formatting.GREEN)), false);
             }
 
             // Enviar el balance actual al cliente
             sendBalanceToClient(player);
         });
+
+
 
         // Guardar datos cuando el servidor se apaga
         ServerLifecycleEvents.SERVER_STOPPING.register(server -> saveData());
@@ -54,16 +62,16 @@ public class EconomyManager {
                 return 1000;
             }
             if (user.getCachedData().getPermissionData().checkPermission("DragonEconomy.mod").asBoolean()) {
-                return 500;
+                return 750;
             }
             if (user.getCachedData().getPermissionData().checkPermission("DragonEconomy.rolplayer").asBoolean()) {
-                return 600;
+                return 750;
             }
             if (user.getCachedData().getPermissionData().checkPermission("DragonEconomy.player").asBoolean()) {
-                return 100;
+                return 250;
             }
         }
-        return 0; // Si el jugador no tiene permisos, no recibe dinero inicial
+        return 0;
     }
 
     public static void sendBalanceToClient(ServerPlayerEntity player) {
@@ -86,10 +94,17 @@ public class EconomyManager {
         setBalance(playerUUID, currentBalance + amount);
     }
 
-    public static void resetPlayer(UUID playerUUID) {
-        playerBalances.remove(playerUUID);
-        saveData();
+    public static void resetPlayer(UUID playerUUID, ServerPlayerEntity player) {
+        int currentBalance = getBalance(playerUUID);
+        int initialMoney = determineInitialMoney(player);
+
+        // En lugar de sobrescribir, sumamos el dinero inicial del rol al actual
+        setBalance(playerUUID, currentBalance + initialMoney);
+
+        player.sendMessage(Text.literal("Tu balance ha sido restablecido con $" + initialMoney + " adicionales. sal y entra para aplicar los cambios")
+                .styled(style -> style.withColor(Formatting.YELLOW)), false);
     }
+
 
     private static void loadData() {
         if (STORAGE_FILE.exists()) {

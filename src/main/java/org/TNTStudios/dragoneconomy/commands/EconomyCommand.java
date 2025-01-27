@@ -27,9 +27,9 @@ public class EconomyCommand {
                                         ServerPlayerEntity targetPlayer = context.getSource().getServer().getPlayerManager().getPlayer(playerName);
 
                                         if (targetPlayer != null) {
-                                            UUID playerUUID = targetPlayer.getUuid(); // Convertimos a UUID
-                                            EconomyManager.resetPlayer(playerUUID); // Usamos el nuevo método
-                                            context.getSource().sendMessage(Text.literal("El dinero inicial de " + playerName + " ha sido restablecido.")
+                                            UUID playerUUID = targetPlayer.getUuid();
+                                            EconomyManager.resetPlayer(playerUUID, targetPlayer);
+                                            context.getSource().sendMessage(Text.literal("El balance de " + playerName + " ha sido ajustado.")
                                                     .styled(style -> style.withColor(Formatting.YELLOW)));
                                         } else {
                                             context.getSource().sendMessage(Text.literal("El jugador no está en línea.")
@@ -39,6 +39,7 @@ public class EconomyCommand {
                                     })
                             )
                     )
+
             );
         });
     }
