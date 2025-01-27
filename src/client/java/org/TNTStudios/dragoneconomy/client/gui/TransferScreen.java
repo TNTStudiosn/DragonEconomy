@@ -1,58 +1,70 @@
 package org.TNTStudios.dragoneconomy.client.gui;
 
-import io.wispforest.owo.ui.base.BaseOwoScreen;
-import io.wispforest.owo.ui.component.ButtonComponent;
-import io.wispforest.owo.ui.component.LabelComponent;
-import io.wispforest.owo.ui.component.Components;
-import io.wispforest.owo.ui.container.FlowLayout;
-import io.wispforest.owo.ui.container.Containers;
-import io.wispforest.owo.ui.core.OwoUIAdapter;
-import io.wispforest.owo.ui.core.Sizing;
-import io.wispforest.owo.ui.core.VerticalAlignment;
-import io.wispforest.owo.ui.util.UISounds;
+import net.fabricmc.api.EnvType;
+import net.fabricmc.api.Environment;
 import net.minecraft.client.MinecraftClient;
+import net.minecraft.client.gui.DrawContext;
+import net.minecraft.client.gui.screen.Screen;
+import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
-import org.TNTStudios.dragoneconomy.network.TransferPacket;
+import org.TNTStudios.dragoneconomy.network.client.TransferPacketClient;
 
-import java.util.List;
-
-public class TransferScreen extends BaseOwoScreen<FlowLayout> {
+@Environment(EnvType.CLIENT)
+public class TransferScreen extends Screen {
 
     private TextFieldWidget recipientField;
     private TextFieldWidget amountField;
-    private final List<String> onlinePlayers;
+    private final int boxWidth = 220;
+    private final int boxHeight = 140;
 
-    public TransferScreen(List<String> onlinePlayers) {
+    public TransferScreen() {
         super(Text.literal("Transferencias"));
-        this.onlinePlayers = onlinePlayers;
     }
 
     @Override
-    protected OwoUIAdapter<FlowLayout> createAdapter() {
-        return OwoUIAdapter.create(this, Containers::verticalFlow);
-    }
-
-    @Override
-    protected void build(FlowLayout root) {
-        root.verticalAlignment(VerticalAlignment.CENTER);
-
-        // Título de la pantalla
-        root.child(Components.label(Text.literal("Transferencias").formatted(Formatting.GOLD)));
+    protected void init() {
+        int centerX = (this.width - boxWidth) / 2;
+        int centerY = (this.height - boxHeight) / 2;
 
         // Campo para ingresar el nombre del destinatario
-        recipientField = new TextFieldWidget(textRenderer, 0, 0, 150, 20, Text.literal("Nombre del jugador"));
-        root.child(Containers.verticalFlow(Sizing.content(), Sizing.content()).child(Components.wrapVanillaWidget(recipientField)));
+        recipientField = new TextFieldWidget(textRenderer, centerX + 20, centerY + 30, 180, 20, Text.literal("Nombre del jugador"));
+        recipientField.setMaxLength(16);
+        this.addDrawableChild(recipientField);
 
         // Campo para ingresar el monto
-        amountField = new TextFieldWidget(textRenderer, 0, 0, 150, 20, Text.literal("Ingrese monto"));
-        root.child(Containers.verticalFlow(Sizing.content(), Sizing.content()).child(Components.wrapVanillaWidget(amountField)));
+        amountField = new TextFieldWidget(textRenderer, centerX + 20, centerY + 60, 180, 20, Text.literal("Ingrese monto"));
+        amountField.setMaxLength(10);
+        this.addDrawableChild(amountField);
 
         // Botón de transferencia
-        root.child(Components.button(Text.literal("Enviar").formatted(Formatting.GREEN), button -> {
-            processTransfer();
-        }));
+        this.addDrawableChild(ButtonWidget.builder(Text.literal("ENVIAR").formatted(Formatting.GREEN), button -> processTransfer())
+                .dimensions(centerX + 60, centerY + 100, 100, 20)
+                .build());
+    }
+
+    @Override
+    public void render(DrawContext context, int mouseX, int mouseY, float delta) {
+        this.renderBackground(context);
+
+        int centerX = (this.width - boxWidth) / 2;
+        int centerY = (this.height - boxHeight) / 2;
+
+        // Dibujar el fondo de la ventana
+        context.fill(centerX, centerY, centerX + boxWidth, centerY + boxHeight, 0xAA000000);
+
+        // Bordes blancos alrededor de la ventana
+        context.fill(centerX, centerY, centerX + boxWidth, centerY + 2, 0xFFFFFFFF);
+        context.fill(centerX, centerY + boxHeight - 2, centerX + boxWidth, centerY + boxHeight, 0xFFFFFFFF);
+        context.fill(centerX, centerY, centerX + 2, centerY + boxHeight, 0xFFFFFFFF);
+        context.fill(centerX + boxWidth - 2, centerY, centerX + boxWidth, centerY + boxHeight, 0xFFFFFFFF);
+
+        // Título
+        context.drawText(this.textRenderer, Text.literal("TRANSFERENCIAS").formatted(Formatting.GOLD, Formatting.BOLD),
+                this.width / 2 - this.textRenderer.getWidth("TRANSFERENCIAS") / 2, centerY + 10, 0xFFFFFF, false);
+
+        super.render(context, mouseX, mouseY, delta);
     }
 
     private void processTransfer() {
@@ -80,16 +92,23 @@ public class TransferScreen extends BaseOwoScreen<FlowLayout> {
                 return;
             }
 
-            // Enviar paquete de transferencia
-            TransferPacket.send(client.player.getUuid().toString(), targetPlayer, amount);
-            UISounds.playInteractionSound();
+            // ✅ Llamar a `TransferPacketClient.send()`
+            TransferPacketClient.send(targetPlayer, amount);
 
             // Confirmación de transferencia
             client.player.sendMessage(Text.literal("Transferencia enviada a " + targetPlayer + " por $" + amount)
                     .formatted(Formatting.GREEN), false);
 
+            // Cerrar la pantalla después de la transferencia
+            client.setScreen(null);
+
         } catch (NumberFormatException e) {
             client.player.sendMessage(Text.literal("Monto inválido, ingresa un número").formatted(Formatting.RED), false);
         }
+    }
+
+    @Override
+    public boolean shouldCloseOnEsc() {
+        return true;
     }
 }

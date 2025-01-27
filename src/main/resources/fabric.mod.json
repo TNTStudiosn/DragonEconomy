@@ -29,8 +29,7 @@
     "fabric": "*",
     "minecraft": "${minecraft_version}",
     "fabric-permissions-api-v0": ">=0.3.1",
-    "luckperms": ">=5.4.102",
-    "owo": ">=0.11.1"
+    "luckperms": ">=5.4.102"
   }
 
 }
