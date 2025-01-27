@@ -11,6 +11,7 @@ import org.TNTStudios.dragoneconomy.EconomyManager;
 import org.TNTStudios.dragoneconomy.Invoice;
 import org.TNTStudios.dragoneconomy.InvoiceManager;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.UUID;
 
@@ -19,7 +20,6 @@ public class TransferPacket {
     public static final Identifier INVOICE_ID = new Identifier("dragoneconomy", "send_invoice");
     public static final Identifier PAY_INVOICE_ID = new Identifier("dragoneconomy", "pay_invoice");
     public static final Identifier REQUEST_INVOICES = new Identifier("dragoneconomy", "request_invoices");
-
 
     public static void registerReceiver() {
         // Manejador de transferencia de dinero estándar
@@ -84,39 +84,39 @@ public class TransferPacket {
         });
 
         // Manejador de pago de facturas
-        ServerPlayNetworking.registerGlobalReceiver(PAY_INVOICE_ID, (server, player, handler, buf, responseSender) -> {
-            String invoiceTitle = buf.readString();
+        ServerPlayNetworking.registerGlobalReceiver(new Identifier("dragoneconomy", "pay_multiple_invoices"), (server, player, handler, buf, responseSender) -> {
+            int count = buf.readInt();
+            List<UUID> invoicesToPay = new ArrayList<>();
 
-            server.execute(() -> {
+            for (int i = 0; i < count; i++) {
+                invoicesToPay.add(buf.readUuid()); // Almacenar los UUIDs de las facturas
+            }
+
+            server.execute(() -> { // 🔹 Aseguramos que el código del servidor se ejecuta correctamente
                 UUID payerUUID = player.getUuid();
-                Invoice targetInvoice = null;
 
-                for (Invoice invoice : InvoiceManager.getInvoices(payerUUID)) {
-                    if (invoice.getTitle().equals(invoiceTitle)) {
-                        targetInvoice = invoice;
-                        break;
-                    }
-                }
+                for (UUID invoiceId : invoicesToPay) {
+                    Invoice targetInvoice = InvoiceManager.getInvoiceById(payerUUID, invoiceId);
 
-                if (targetInvoice != null) {
-                    if (EconomyManager.getBalance(payerUUID) >= targetInvoice.getAmount()) {
-                        EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - targetInvoice.getAmount());
+                    if (targetInvoice != null) {
+                        if (EconomyManager.getBalance(payerUUID) >= targetInvoice.getAmount()) {
+                            EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - targetInvoice.getAmount());
 
-                        if (!targetInvoice.isGovernmentPayment()) {
-                            EconomyManager.addMoney(targetInvoice.getSender(), targetInvoice.getAmount());
+                            if (!targetInvoice.isGovernmentPayment()) {
+                                EconomyManager.addMoney(targetInvoice.getSender(), targetInvoice.getAmount());
+                            }
+
+                            InvoiceManager.removeInvoice(payerUUID, targetInvoice);
+                            player.sendMessage(Text.literal("✔ Has pagado la factura: " + targetInvoice.getTitle()).formatted(Formatting.GREEN), false);
+                        } else {
+                            player.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.").formatted(Formatting.RED), false);
                         }
-
-                        InvoiceManager.removeInvoice(payerUUID, targetInvoice);
-
-                        player.sendMessage(Text.literal("✔ Has pagado la factura: " + invoiceTitle).formatted(Formatting.GREEN), false);
                     } else {
-                        player.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.").formatted(Formatting.RED), false);
+                        player.sendMessage(Text.literal("⚠ Factura no encontrada.").formatted(Formatting.RED), false);
                     }
-                } else {
-                    player.sendMessage(Text.literal("⚠ Factura no encontrada.").formatted(Formatting.RED), false);
                 }
             });
-        });
+        }); // 🔹 Se cierra correctamente `ServerPlayNetworking.registerGlobalReceiver()`
 
         // Manejador para solicitud de facturas
         ServerPlayNetworking.registerGlobalReceiver(REQUEST_INVOICES, (server, player, handler, buf, responseSender) -> {
@@ -125,21 +125,19 @@ public class TransferPacket {
                 List<Invoice> playerInvoices = InvoiceManager.getInvoices(playerUUID);
 
                 PacketByteBuf responseBuf = PacketByteBufs.create();
-                responseBuf.writeInt(playerInvoices.size());
+                responseBuf.writeInt(playerInvoices.size()); // 🔹 Enviar número total de facturas
 
                 for (Invoice invoice : playerInvoices) {
-                    responseBuf.writeString(invoice.getTitle());
-                    responseBuf.writeInt(invoice.getAmount());
-                    responseBuf.writeString(invoice.getDescription());
-                    responseBuf.writeBoolean(invoice.isGovernmentPayment());
+                    responseBuf.writeUuid(invoice.getInvoiceId()); // 🔹 Enviar UUID único
+                    responseBuf.writeUuid(invoice.getSender()); // 🔹 Enviar ID del remitente
+                    responseBuf.writeString(invoice.getTitle()); // 🔹 Enviar título de factura
+                    responseBuf.writeInt(invoice.getAmount()); // 🔹 Enviar monto
+                    responseBuf.writeString(invoice.getDescription()); // 🔹 Enviar descripción
+                    responseBuf.writeBoolean(invoice.isGovernmentPayment()); // 🔹 Enviar si es pago gubernamental
                 }
 
-                System.out.println("📜 Enviando " + playerInvoices.size() + " facturas al cliente " + player.getName().getString());
-
-                // Enviar datos de facturas al cliente
                 ServerPlayNetworking.send(player, REQUEST_INVOICES, responseBuf);
             });
         });
-
-    }
+    } // 🔹 Se cierra correctamente `registerReceiver()`
 }

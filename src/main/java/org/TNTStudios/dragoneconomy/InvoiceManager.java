@@ -71,5 +71,15 @@ public class InvoiceManager {
         }
     }
 
+    public static Invoice getInvoiceById(UUID recipientUUID, UUID invoiceId) {
+        List<Invoice> userInvoices = invoices.getOrDefault(recipientUUID, new ArrayList<>());
+        for (Invoice invoice : userInvoices) {
+            if (invoice.getInvoiceId().equals(invoiceId)) {
+                return invoice;
+            }
+        }
+        return null;
+    }
+
 
 }

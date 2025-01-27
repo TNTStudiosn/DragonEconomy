@@ -8,6 +8,7 @@ import net.minecraft.server.network.ServerPlayerEntity;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
 import net.minecraft.util.Identifier;
+import org.TNTStudios.dragoneconomy.Invoice;
 import org.TNTStudios.dragoneconomy.InvoiceManager;
 
 public class InvoicePacket {
@@ -25,20 +26,34 @@ public class InvoicePacket {
             server.execute(() -> {
                 ServerPlayerEntity recipient = server.getPlayerManager().getPlayer(recipientName);
                 if (recipient != null) {
-                    InvoiceManager.createInvoice(player.getUuid(), recipient.getUuid(), title, amount, description, isGovernment);
+                    Invoice invoice = new Invoice(player.getUuid(), recipient.getUuid(), title, amount, description, isGovernment);
+                    InvoiceManager.createInvoice(
+                            invoice.getSender(),
+                            invoice.getRecipient(),
+                            invoice.getTitle(),
+                            invoice.getAmount(),
+                            invoice.getDescription(),
+                            invoice.isGovernmentPayment()
+                    );
 
-                    // 📌 Enviar paquete de factura al cliente
-                    PacketByteBuf invoiceBuf = new PacketByteBuf(PacketByteBufs.create());
-                    invoiceBuf.writeString(title); // Enviar solo el título por simplicidad
+
+                    // Al enviar facturas al cliente
+                    PacketByteBuf invoiceBuf = PacketByteBufs.create();
+                    invoiceBuf.writeUuid(invoice.getInvoiceId()); // Enviar UUID
+                    invoiceBuf.writeUuid(invoice.getSender()); // Enviar ID del remitente
+                    invoiceBuf.writeString(invoice.getTitle());
+                    invoiceBuf.writeInt(invoice.getAmount());
+                    invoiceBuf.writeString(invoice.getDescription());
+                    invoiceBuf.writeBoolean(invoice.isGovernmentPayment());
+
                     ServerPlayNetworking.send(recipient, RECEIVE_INVOICE, invoiceBuf);
 
-                    // Notificación al jugador destinatario
-                    recipient.sendMessage(Text.literal("📜 Has recibido una nueva factura.")
-                            .formatted(Formatting.YELLOW), false);
+                    recipient.sendMessage(Text.literal("📜 Has recibido una nueva factura.").formatted(Formatting.YELLOW), false);
                 } else {
                     player.sendMessage(Text.literal("⚠ No se encontró al jugador.").formatted(Formatting.RED), false);
                 }
             });
         });
     }
+
 }

@@ -5,6 +5,9 @@ import net.minecraft.network.PacketByteBuf;
 import net.minecraft.util.Identifier;
 import org.TNTStudios.dragoneconomy.client.ClientInvoiceManager;
 import org.TNTStudios.dragoneconomy.network.EconomyClientData;
+import org.TNTStudios.dragoneconomy.Invoice;
+
+import java.util.UUID;
 
 public class EconomyClientPacketHandler {
     public static final Identifier SYNC_BALANCE = new Identifier("dragoneconomy", "sync_balance");
@@ -20,15 +23,22 @@ public class EconomyClientPacketHandler {
 
         // Recibir facturas enviadas por el servidor
         ClientPlayNetworking.registerGlobalReceiver(RECEIVE_INVOICE, (client, handler, buf, responseSender) -> {
-            String invoice = buf.readString(); // Recibir la factura
+            UUID invoiceId = buf.readUuid(); // Recibir ID único de factura
+            UUID senderId = buf.readUuid(); // Recibir ID del remitente
+            String title = buf.readString();
+            int amount = buf.readInt();
+            String description = buf.readString();
+            boolean isGovernment = buf.readBoolean();
+
+            Invoice invoice = new Invoice(invoiceId, senderId, title, amount, description, isGovernment);
 
             client.execute(() -> {
-                System.out.println("📜 Factura recibida en cliente: " + invoice); // 🔍 Depuración
+                System.out.println("📜 Factura recibida en cliente: " + invoice.getTitle());
 
-                // 📌 Asegurar que se guarde correctamente
+                // 📌 Ahora almacenamos la factura como un objeto Invoice
                 ClientInvoiceManager.addInvoice(invoice);
 
-                // 🔄 Confirmar que la factura se guardó
+                // 🔄 Confirmar que la factura se guardó correctamente
                 System.out.println("📜 Facturas actuales en ClientInvoiceManager: " + ClientInvoiceManager.getInvoices());
 
                 client.player.sendMessage(
@@ -40,15 +50,15 @@ public class EconomyClientPacketHandler {
         });
 
         ClientPlayNetworking.registerGlobalReceiver(INVOICE_PAID, (client, handler, buf, responseSender) -> {
-            String paidInvoice = buf.readString();
+            UUID invoiceId = buf.readUuid(); // Ahora el servidor envía el UUID de la factura pagada
             client.execute(() -> {
-                System.out.println("📜 Factura pagada en cliente: " + paidInvoice);
+                System.out.println("📜 Factura pagada en cliente: " + invoiceId);
 
-                // ✅ Ahora eliminamos la factura después de pagarla
-                ClientInvoiceManager.removeInvoice(paidInvoice);
+                // ✅ Ahora eliminamos la factura usando su UUID en lugar de un String
+                ClientInvoiceManager.removeInvoice(invoiceId);
 
                 client.player.sendMessage(
-                        net.minecraft.text.Text.literal("✔ Has pagado la factura: " + paidInvoice)
+                        net.minecraft.text.Text.literal("✔ Has pagado una factura.")
                                 .formatted(net.minecraft.util.Formatting.GREEN),
                         false
                 );
