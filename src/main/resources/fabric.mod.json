@@ -1,0 +1,32 @@
+{
+  "schemaVersion": 1,
+  "id": "dragoneconomy",
+  "version": "${version}",
+  "name": "DragonEconomy",
+  "description": "Mod Creado principalmente para DragonCraft v6",
+  "authors": [],
+  "contact": {},
+  "license": "All-Rights-Reserved",
+  "icon": "assets/dragoneconomy/icon.png",
+  "environment": "*",
+  "entrypoints": {
+    "client": [
+      "org.TNTStudios.dragoneconomy.client.DragoneconomyClient"
+    ],
+    "main": [
+      "org.TNTStudios.dragoneconomy.Dragoneconomy"
+    ]
+  },
+  "mixins": [
+    "dragoneconomy.mixins.json",
+    {
+      "config": "dragoneconomy.client.mixins.json",
+      "environment": "client"
+    }
+  ],
+  "depends": {
+    "fabricloader": ">=${loader_version}",
+    "fabric": "*",
+    "minecraft": "${minecraft_version}"
+  }
+}
