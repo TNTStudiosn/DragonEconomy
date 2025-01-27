@@ -103,17 +103,42 @@ public class TransferPacket {
                     if (targetInvoice != null) {
                         System.out.println("✅ Factura encontrada en servidor: " + targetInvoice.getTitle());
 
-                        if (EconomyManager.getBalance(payerUUID) >= targetInvoice.getAmount()) {
-                            EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - targetInvoice.getAmount());
+                        int amount = targetInvoice.getAmount();
+                        UUID senderUUID = targetInvoice.getSender();
+
+                        if (EconomyManager.getBalance(payerUUID) >= amount) {
+                            // Restar dinero al jugador que paga la factura
+                            EconomyManager.setBalance(payerUUID, EconomyManager.getBalance(payerUUID) - amount);
+                            EconomyManager.sendBalanceToClient(player);
 
                             if (!targetInvoice.isGovernmentPayment()) {
-                                EconomyManager.addMoney(targetInvoice.getSender(), targetInvoice.getAmount());
+                                // Si no es un pago gubernamental, añadir dinero al emisor
+                                EconomyManager.addMoney(senderUUID, amount);
+
+                                ServerPlayerEntity sender = server.getPlayerManager().getPlayer(senderUUID);
+                                if (sender != null) {
+                                    sender.sendMessage(Text.literal("💰 Tu factura '" + targetInvoice.getTitle() + "' ha sido pagada. Has recibido $" + amount)
+                                            .formatted(Formatting.GREEN), false);
+                                    EconomyManager.sendBalanceToClient(sender);
+                                }
+                            } else {
+                                // Notificar al emisor que su factura al gobierno ha sido pagada
+                                ServerPlayerEntity sender = server.getPlayerManager().getPlayer(senderUUID);
+                                if (sender != null) {
+                                    sender.sendMessage(Text.literal("🏛 Tu factura '" + targetInvoice.getTitle() + "' ha sido pagada al gobierno.")
+                                            .formatted(Formatting.YELLOW), false);
+                                }
                             }
 
+                            // Remover la factura pagada
                             InvoiceManager.removeInvoice(payerUUID, targetInvoice);
-                            player.sendMessage(Text.literal("✔ Has pagado la factura: " + targetInvoice.getTitle()).formatted(Formatting.GREEN), false);
+
+                            // Notificar al jugador que pagó
+                            player.sendMessage(Text.literal("✔ Has pagado la factura: " + targetInvoice.getTitle() + " por $" + amount)
+                                    .formatted(Formatting.GREEN), false);
                         } else {
-                            player.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.").formatted(Formatting.RED), false);
+                            player.sendMessage(Text.literal("⚠ No tienes fondos suficientes para pagar esta factura.")
+                                    .formatted(Formatting.RED), false);
                         }
                     } else {
                         player.sendMessage(Text.literal("⚠ Factura no encontrada.").formatted(Formatting.RED), false);
@@ -121,6 +146,7 @@ public class TransferPacket {
                 }
             });
         });
+
 
 
         // Manejador para solicitud de facturas

@@ -7,7 +7,6 @@ import net.minecraft.client.gui.screen.Screen;
 import net.minecraft.client.gui.widget.ButtonWidget;
 import net.minecraft.client.gui.widget.CheckboxWidget;
 import net.minecraft.client.gui.widget.TextFieldWidget;
-import net.minecraft.client.network.ClientPlayNetworkHandler;
 import net.minecraft.network.PacketByteBuf;
 import net.minecraft.text.Text;
 import net.minecraft.util.Formatting;
@@ -20,7 +19,6 @@ public class InvoiceScreen extends Screen {
     private TextFieldWidget recipientField;
     private TextFieldWidget titleField;
     private TextFieldWidget amountField;
-    private TextFieldWidget descriptionField;
     private ButtonWidget sendButton;
     private CheckboxWidget governmentPaymentCheckBox;
 
@@ -37,20 +35,18 @@ public class InvoiceScreen extends Screen {
         recipientField = new TextFieldWidget(textRenderer, centerX - 75, startY + 10, 150, 20, Text.literal(""));
         titleField = new TextFieldWidget(textRenderer, centerX - 75, startY + 50, 150, 20, Text.literal(""));
         amountField = new TextFieldWidget(textRenderer, centerX - 75, startY + 90, 150, 20, Text.literal(""));
-        descriptionField = new TextFieldWidget(textRenderer, centerX - 75, startY + 130, 150, 40, Text.literal(""));
 
         this.addDrawableChild(recipientField);
         this.addDrawableChild(titleField);
         this.addDrawableChild(amountField);
-        this.addDrawableChild(descriptionField);
 
         // Checkbox de pago al gobierno
-        governmentPaymentCheckBox = new CheckboxWidget(centerX - 75, startY + 185, 20, 20, Text.literal("Pago al Gobierno"), false);
+        governmentPaymentCheckBox = new CheckboxWidget(centerX - 75, startY + 135, 20, 20, Text.literal("Pago al Gobierno"), false);
         this.addDrawableChild(governmentPaymentCheckBox);
 
         // Botón de enviar
         sendButton = ButtonWidget.builder(Text.literal("Enviar"), button -> sendInvoice())
-                .dimensions(centerX - 50, startY + 215, 100, 20)
+                .dimensions(centerX - 50, startY + 165, 100, 20)
                 .build();
         this.addDrawableChild(sendButton);
     }
@@ -59,7 +55,7 @@ public class InvoiceScreen extends Screen {
         String recipient = recipientField.getText().trim();
         String title = titleField.getText().trim();
         String amount = amountField.getText().trim();
-        String description = descriptionField.getText().trim();
+        String description = ""; // 🔹 Siempre se enviará vacío
         boolean isGovernmentPayment = governmentPaymentCheckBox.isChecked();
 
         if (recipient.isEmpty() || title.isEmpty() || amount.isEmpty()) {
@@ -76,7 +72,7 @@ public class InvoiceScreen extends Screen {
             buf.writeString(recipient);
             buf.writeString(title);
             buf.writeInt(amountValue);
-            buf.writeString(description);
+            buf.writeString(description); // 🔹 Siempre vacío
             buf.writeBoolean(isGovernmentPayment);
 
             ClientPlayNetworking.send(new Identifier("dragoneconomy", "send_invoice"), buf);
@@ -99,7 +95,6 @@ public class InvoiceScreen extends Screen {
         context.drawText(this.textRenderer, Text.literal("Destinatario:"), centerX - 75, startY, 0xFFFFFF, false);
         context.drawText(this.textRenderer, Text.literal("Título:"), centerX - 75, startY + 40, 0xFFFFFF, false);
         context.drawText(this.textRenderer, Text.literal("Cantidad:"), centerX - 75, startY + 80, 0xFFFFFF, false);
-        context.drawText(this.textRenderer, Text.literal("Descripción:"), centerX - 75, startY + 120, 0xFFFFFF, false);
 
         super.render(context, mouseX, mouseY, delta);
     }
