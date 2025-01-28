@@ -1,4 +1,6 @@
 {
-  "key.dragoneconomy.open_transfer_screen": "Abrir pantalla de transferencias",
-  "category.dragoneconomy": "Economía Dragón"
+  "key.dragoneconomy.open_transfer_screen": "Pantalla de Transferencia",
+  "key.dragoneconomy.open_pay_invoice_screen": "Pantalla de Pagar Factura",
+  "key.dragoneconomy.open_invoice_screen": "Pantalla de Factura",
+  "category.dragoneconomy": "TNT Economía"
 }

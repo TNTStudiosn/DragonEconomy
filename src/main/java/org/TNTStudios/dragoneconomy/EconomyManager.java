@@ -70,7 +70,7 @@ public class EconomyManager {
                 return 250;
             }
         }
-        return 100;
+        return 0;
     }
 
 
